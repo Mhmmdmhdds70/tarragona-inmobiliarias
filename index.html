@@ -173,8 +173,8 @@ function draw(){
   // grid every 500 m
   let s = "";
   const step = satOn? 1e9 : 500, gx0 = Math.floor((view.cx - w/2/view.s)/step)*step, gy0 = Math.floor((view.cy - h/2/view.s)/step)*step;
-  for(let x=gx0; sx(x)<w; x+=step) s += `<line x1="${sx(x)}" y1="0" x2="${sx(x)}" y2="${h}" stroke="var(--grid)" stroke-width="1"/>`;
-  for(let y=gy0; sy(y)<h; y+=step) s += `<line x1="0" y1="${sy(y)}" x2="${w}" y2="${sy(y)}" stroke="var(--grid)" stroke-width="1"/>`;
+  if(!satOn) for(let x=gx0; sx(x)<w; x+=step) s += `<line x1="${sx(x)}" y1="0" x2="${sx(x)}" y2="${h}" stroke="var(--grid)" stroke-width="1"/>`;
+  if(!satOn) for(let y=gy0; sy(y)<h; y+=step) s += `<line x1="0" y1="${sy(y)}" x2="${w}" y2="${sy(y)}" stroke="var(--grid)" stroke-width="1"/>`;
   // route in numbered order
   s += `<polyline fill="none" stroke="${satOn?"#fff":"var(--muted)"}" stroke-opacity="${satOn?.7:.45}" stroke-width="1.5" stroke-dasharray="4 4" points="${A.map(a=>sx(a.x)+","+sy(a.y)).join(" ")}"/>`;
   // area labels
