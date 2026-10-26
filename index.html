@@ -65,6 +65,10 @@ main .wrap{padding-block:14px 40px;display:flex;flex-direction:column;gap:14px}
 .btn:disabled{opacity:.45;cursor:default}
 .check{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px dashed var(--line);border-radius:10px;cursor:pointer;font-weight:700}
 .check input{width:24px;height:24px;accent-color:var(--s1)}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.pick button{font:inherit;font-size:.82rem;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 10px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.pick button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:700}
+.reset{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 textarea{width:100%;font:inherit;font-size:.9rem;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:var(--ink);resize:vertical;min-height:60px}
 .visits{font-size:.82rem;color:var(--muted)}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
@@ -104,6 +108,7 @@ textarea{width:100%;font:inherit;font-size:.9rem;border:1px solid var(--line);bo
   <div id="groups"></div>
   <p class="note">داده‌ها از گوگل مپ (اکتبر ۲۰۲۶). بعضی از این دفترها فقط مدیریت ساختمان انجام می‌دهند. با دکمه پایین نقشه بین نمای ماهواره‌ای و نقشه ساده جابه‌جا شوید. برای مسیریابی روی «باز کردن در گوگل مپ» بزنید. شماره‌ها به ترتیب نزدیکی هستند، یعنی اگر به ترتیب بروید مسیرتان کوتاه‌تر می‌شود.</p>
   <p class="note" id="store"></p>
+  <div class="reset" id="reset"><button class="btn" id="resetBtn">همه را خاکستری کن (پاک کردن همه)</button></div>
 </div></main>
 
 <script>
@@ -278,17 +283,20 @@ function renderPanel(){
     <div class="ltr" style="color:var(--muted)">${esc(a.addr)} · ${esc(a.area)}${a.rt? " · ★ "+a.rt : ""}</div>${me? `<div style="font-weight:700">فاصله از شما: ${fmtD(dist(a))}</div>`:""}
     ${c<3 ? `<label class="check"><input type="checkbox" id="tick"> تیک بزن: مراجعه ${["اول","دوم","سوم"][c]} را ثبت کن</label>`
           : `<div class="check" style="border-style:solid;border-color:var(--s3)">هر سه مراجعه ثبت شده است</div>`}
+    <div class="pick" role="group" aria-label="تغییر رنگ">${ST.map((x,i)=>`<button data-c="${i}" aria-pressed="${i===c}"><span class="dot" style="background:${x.c}"></span>${i===0?"خاکستری (پاک کردن)":x.t}</button>`).join("")}</div>
     <div class="visits">${c? "وضعیت: "+ST[c].t + (v.dates?.length? " · تاریخ‌ها: "+v.dates.map(d=>new Date(d).toLocaleDateString("fa-IR",{month:"short",day:"numeric"})).join("، "):"") : "هنوز مراجعه‌ای ثبت نشده"}</div>
     <div class="row">
       ${a.tel? `<span class="btn ltr" style="user-select:all">${a.tel}</span><button class="btn" id="copy">کپی شماره</button>`:""}
       <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}&travelmode=walking" target="_blank" rel="noopener">مسیر پیاده از جای من ↗</a>
       <a class="btn" href="${maps}" target="_blank" rel="noopener">باز کردن در گوگل مپ ↗</a>
       <a class="btn" href="https://www.google.com/maps/@?api=1&map_action=map&center=${a.lat},${a.lng}&zoom=20&basemap=satellite" target="_blank" rel="noopener">نمای ماهواره‌ای ↗</a>
-      ${c? `<button class="btn" id="undo">برگرداندن آخرین مراجعه</button>`:""}
+      ${c? `<button class="btn" id="undo">↶ یک مرحله برگرد</button>`:""}
     </div>
     <textarea id="note" placeholder="یادداشت (مثلاً: قیمت‌ها، اسم مشاور، چه مدارکی خواستند…)">${esc(v.note||"")}</textarea>`;
   const t = p.querySelector("#tick");
   if(t) t.onchange = () => { const o = V[a.id] = V[a.id] || {c:0,dates:[],note:""}; o.c = Math.min(3,(o.c||0)+1); o.dates = [...(o.dates||[]), new Date().toISOString()]; save(a.id); renderAll(); };
+  p.querySelectorAll(".pick button").forEach(b => b.onclick = () => { const n=+b.dataset.c; const o = V[a.id] = V[a.id] || {c:0,dates:[],note:""};
+    let ds=(o.dates||[]).slice(0,n); while(ds.length<n) ds.push(new Date().toISOString()); o.c=n; o.dates=ds; save(a.id); renderAll(); });
   const u = p.querySelector("#undo");
   if(u) u.onclick = () => { const o = V[a.id]; o.c = Math.max(0,o.c-1); o.dates = (o.dates||[]).slice(0,-1); save(a.id); renderAll(); };
   const cp = p.querySelector("#copy");
@@ -318,6 +326,11 @@ function renderList(){
   g.querySelectorAll("button[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id,true));
 }
 function renderAll(){ renderHeader(); renderList(); renderPanel(); draw(); }
+const rs=document.getElementById("reset");
+function drawReset(ask){ rs.innerHTML = ask ? `<span>همه تیک‌ها و یادداشت‌ها پاک شوند؟</span><button class="btn primary" id="rsYes">بله، پاک کن</button><button class="btn" id="rsNo">نه</button>` : `<button class="btn" id="resetBtn">همه را خاکستری کن (پاک کردن همه)</button>`;
+  if(ask){ rs.querySelector("#rsYes").onclick=async()=>{ const ids=Object.keys(V); V={}; saveLocal(); for(const id of ids){ if(col){ try{ await col.doc(id).delete(); }catch(e){} } } drawReset(false); renderAll(); }; rs.querySelector("#rsNo").onclick=()=>drawReset(false); }
+  else rs.querySelector("#resetBtn").onclick=()=>drawReset(true); }
+drawReset(false);
 document.getElementById("near").onclick=()=>{ nearSort=!nearSort; renderList(); };
 document.getElementById("q").addEventListener("input", e => { query = e.target.value; renderList(); });
 new ResizeObserver(()=>draw()).observe(map);
